@@ -53,13 +53,15 @@ const buildEmptyJsonBody = (bodySchema) => {
   return _jsonBody;
 };
 
-const transformOpenapiRequestItem = (request) => {
+const transformOpenApiRequestItem = (request, options) => {
   let _operationObject = request.operationObject;
-
-  let operationName = _operationObject.summary || _operationObject.operationId || _operationObject.description;
-  if (!operationName) {
-    operationName = `${request.method} ${request.path}`;
-  }
+  let operationName =
+    options?.enableMinimalisticRequestNames?.enabled && _operationObject.operationId ?
+      _operationObject.operationId :
+      _operationObject.summary ||
+      _operationObject.operationId ||
+      _operationObject.description ||
+      `${request.method} ${request.path}`;
 
   // replace OpenAPI links in path by Bruno variables
   let path = request.path.replace(/{([a-zA-Z]+)}/g, `{{${_operationObject.operationId}_$1}}`);
@@ -355,7 +357,7 @@ const openAPIRuntimeExpressionToScript = (expression) => {
   return expression;
 };
 
-export const parseOpenApiCollection = (data) => {
+export const parseOpenApiCollection = (data, options) => {
   const brunoCollection = {
     name: '',
     uid: uuid(),
@@ -372,8 +374,8 @@ export const parseOpenApiCollection = (data) => {
         return;
       }
 
-      // Currently parsing of openapi spec is "do your best", that is
-      // allows "invalid" openapi spec
+      // Currently parsing of OpenAPI spec is "do your best", that is
+      // allows "invalid" OpenAPI spec
 
       // Assumes v3 if not defined. v2 is not supported yet
       if (collectionData.openapi && !collectionData.openapi.startsWith('3')) {
@@ -422,7 +424,7 @@ export const parseOpenApiCollection = (data) => {
                 path: path.replace(/{([^}]+)}/g, ':$1'), // Replace placeholders enclosed in curly braces with colons
                 operationObject: operationObject,
                 global: {
-                  server: '{{baseUrl}}', 
+                  server: '{{baseUrl}}',
                   security: securityConfig
                 }
               };
@@ -436,11 +438,11 @@ export const parseOpenApiCollection = (data) => {
           uid: uuid(),
           name: group.name,
           type: 'folder',
-          items: group.requests.map(transformOpenapiRequestItem)
+          items: group.requests.map(r => transformOpenApiRequestItem(r, options))
         };
       });
 
-      let ungroupedItems = ungroupedRequests.map(transformOpenapiRequestItem);
+      let ungroupedItems = ungroupedRequests.map(r => transformOpenApiRequestItem(r, options));
       let brunoCollectionItems = brunoFolders.concat(ungroupedItems);
       brunoCollection.items = brunoCollectionItems;
       resolve(brunoCollection);
@@ -451,11 +453,11 @@ export const parseOpenApiCollection = (data) => {
   });
 };
 
-const importCollection = () => {
+const importCollection = (options) => {
   return new Promise((resolve, reject) => {
     fileDialog({ accept: '.json, .yaml, .yml, application/json, application/yaml, application/x-yaml' })
       .then(readFile)
-      .then(parseOpenApiCollection)
+      .then((data) => parseOpenApiCollection(data, options))
       .then(transformItemsInCollection)
       .then(hydrateSeqInCollection)
       .then(validateSchema)

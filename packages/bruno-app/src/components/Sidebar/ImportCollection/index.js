@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import importBrunoCollection from 'utils/importers/bruno-collection';
 import importPostmanCollection from 'utils/importers/postman-collection';
 import importInsomniaCollection from 'utils/importers/insomnia-collection';
-import importOpenapiCollection from 'utils/importers/openapi-collection';
+import importOpenApiCollection from 'utils/importers/openapi-collection';
 import { toastError } from 'utils/common/error';
 import Modal from 'components/Modal';
 
@@ -13,8 +13,16 @@ const ImportCollection = ({ onClose, handleSubmit }) => {
       label: 'Auto translate postman scripts',
       subLabel:
         "When enabled, Bruno will try as best to translate the scripts from the imported collection to Bruno's format."
+    },
+
+    enableMinimalisticRequestNames: {
+      enabled: false,
+      label: 'Minimalistic request and file names',
+      subLabel:
+        "Favor operation IDs as request and file names over other spec-related data such as summary or description. This may make collection generation more robust and eventually more readable and consistent for regenerations."
     }
   });
+
   const handleImportBrunoCollection = () => {
     importBrunoCollection()
       .then(({ collection }) => {
@@ -39,13 +47,14 @@ const ImportCollection = ({ onClose, handleSubmit }) => {
       .catch((err) => toastError(err, 'Insomnia Import collection failed'));
   };
 
-  const handleImportOpenapiCollection = () => {
-    importOpenapiCollection()
+  const handleImportOpenApiCollection = () => {
+    importOpenApiCollection(options)
       .then(({ collection }) => {
         handleSubmit({ collection });
       })
       .catch((err) => toastError(err, 'OpenAPI v3 Import collection failed'));
   };
+
   const toggleOptions = (event, optionKey) => {
     setOptions({
       ...options,
@@ -55,6 +64,7 @@ const ImportCollection = ({ onClose, handleSubmit }) => {
       }
     });
   };
+
   const CollectionButton = ({ children, className, onClick }) => {
     return (
       <button
@@ -67,6 +77,7 @@ const ImportCollection = ({ onClose, handleSubmit }) => {
       </button>
     );
   };
+
   return (
     <Modal size="sm" title="Import Collection" hideFooter={true} handleCancel={onClose}>
       <div className="flex flex-col">
@@ -75,7 +86,7 @@ const ImportCollection = ({ onClose, handleSubmit }) => {
           <CollectionButton onClick={handleImportBrunoCollection}>Bruno Collection</CollectionButton>
           <CollectionButton onClick={handleImportPostmanCollection}>Postman Collection</CollectionButton>
           <CollectionButton onClick={handleImportInsomniaCollection}>Insomnia Collection</CollectionButton>
-          <CollectionButton onClick={handleImportOpenapiCollection}>OpenAPI V3 Spec</CollectionButton>
+          <CollectionButton onClick={handleImportOpenApiCollection}>OpenAPI V3 Spec</CollectionButton>
         </div>
         <div className="flex justify-start w-full mt-4 max-w-[450px]">
           {Object.entries(options || {}).map(([key, option]) => (
